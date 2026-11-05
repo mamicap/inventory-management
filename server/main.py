@@ -1,7 +1,8 @@
+from datetime import date, timedelta
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from mock_data import inventory_items, orders, demand_forecasts, backlog_items, spending_summary, monthly_spending, category_spending, recent_transactions, purchase_orders
 
 app = FastAPI(title="Factory Inventory Management System")
@@ -119,6 +120,49 @@ class CreatePurchaseOrderRequest(BaseModel):
     unit_cost: float
     expected_delivery_date: str
     notes: Optional[str] = None
+
+class RestockingLineRequest(BaseModel):
+    sku: str
+    quantity: int = Field(gt=0)
+
+class CreateRestockingOrderRequest(BaseModel):
+    budget: float = Field(ge=0)
+    lines: List[RestockingLineRequest]
+
+class RestockingLine(BaseModel):
+    sku: str
+    name: str
+    category: str
+    quantity: int
+    unit_cost: float
+    line_total: float
+    lead_time_days: int
+
+class RestockingOrder(BaseModel):
+    id: str
+    order_number: str
+    submitted_date: str
+    status: str
+    budget: float
+    total_cost: float
+    lead_time_days: int
+    expected_delivery: str
+    lines: List[RestockingLine]
+
+# Submitted restocking orders (in memory only, cleared on restart like all other data)
+restocking_orders: list = []
+
+# Mock supplier lead times in days, by inventory category
+LEAD_TIME_DAYS = {
+    'Circuit Boards': 14,
+    'Sensors': 10,
+    'Actuators': 21,
+    'Controllers': 18,
+    'Power Supplies': 12,
+    'Widgets': 7,
+    'Components': 10,
+}
+DEFAULT_LEAD_TIME_DAYS = 14
 
 # API endpoints
 @app.get("/")
@@ -303,6 +347,55 @@ def get_monthly_trends():
     result = list(months.values())
     result.sort(key=lambda x: x['month'])
     return result
+
+@app.get("/api/restocking-orders", response_model=List[RestockingOrder])
+def get_restocking_orders():
+    """Get submitted restocking orders, newest first"""
+    return list(reversed(restocking_orders))
+
+@app.post("/api/restocking-orders", response_model=RestockingOrder, status_code=201)
+def create_restocking_order(request: CreateRestockingOrderRequest):
+    """Submit a restocking order"""
+    if not request.lines:
+        raise HTTPException(status_code=400, detail="Order must contain at least one line")
+
+    # Costs, totals and lead times are recomputed from inventory data rather than
+    # trusting client-supplied values, so the budget check cannot be bypassed
+    lines = []
+    for line in request.lines:
+        item = next((i for i in inventory_items if i["sku"] == line.sku), None)
+        if not item:
+            raise HTTPException(status_code=404, detail=f"SKU {line.sku} not found")
+        lines.append({
+            "sku": item["sku"],
+            "name": item["name"],
+            "category": item["category"],
+            "quantity": line.quantity,
+            "unit_cost": item["unit_cost"],
+            "line_total": round(line.quantity * item["unit_cost"], 2),
+            "lead_time_days": LEAD_TIME_DAYS.get(item["category"], DEFAULT_LEAD_TIME_DAYS),
+        })
+
+    total_cost = round(sum(l["line_total"] for l in lines), 2)
+    if total_cost > request.budget:
+        raise HTTPException(status_code=400, detail="Order total exceeds budget")
+
+    # The supplier ships lines together, so the order arrives when its slowest line does
+    lead_time_days = max(l["lead_time_days"] for l in lines)
+    today = date.today()
+    order = {
+        "id": str(len(restocking_orders) + 1),
+        "order_number": f"RST-{today.year}-{len(restocking_orders) + 1:04d}",
+        "submitted_date": today.isoformat(),
+        "status": "Submitted",
+        "budget": request.budget,
+        "total_cost": total_cost,
+        "lead_time_days": lead_time_days,
+        "expected_delivery": (today + timedelta(days=lead_time_days)).isoformat(),
+        "lines": lines,
+    }
+    restocking_orders.append(order)
+    return order
 
 if __name__ == "__main__":
     import uvicorn

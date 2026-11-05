@@ -74,6 +74,55 @@
           </table>
         </div>
       </div>
+
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">{{ t('orders.submittedOrders') }} ({{ submittedOrders.length }})</h3>
+        </div>
+        <div v-if="submittedOrders.length === 0" class="empty-submitted">
+          {{ t('orders.noSubmittedOrders') }}
+        </div>
+        <div v-else class="table-container">
+          <table class="orders-table">
+            <thead>
+              <tr>
+                <th class="col-order-number">{{ t('orders.table.orderNumber') }}</th>
+                <th class="col-date">{{ t('orders.submittedDate') }}</th>
+                <th class="col-items">{{ t('orders.table.items') }}</th>
+                <th class="col-value">{{ t('orders.total') }}</th>
+                <th class="col-date">{{ t('orders.leadTime') }}</th>
+                <th class="col-date">{{ t('orders.expectedDelivery') }}</th>
+                <th class="col-status">{{ t('orders.table.status') }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in submittedOrders" :key="order.id">
+                <td class="col-order-number"><strong>{{ order.order_number }}</strong></td>
+                <td class="col-date">{{ formatDate(order.submitted_date) }}</td>
+                <td class="col-items">
+                  <details class="items-details">
+                    <summary class="items-summary">
+                      {{ t('orders.itemsCount', { count: order.lines.length }) }}
+                    </summary>
+                    <div class="items-dropdown">
+                      <div v-for="line in order.lines" :key="line.sku" class="item-entry">
+                        <span class="item-name">{{ translateProductName(line.name) }}</span>
+                        <span class="item-meta">{{ line.sku }} | {{ t('orders.quantity') }}: {{ line.quantity }}</span>
+                      </div>
+                    </div>
+                  </details>
+                </td>
+                <td class="col-value"><strong>{{ currencySymbol }}{{ order.total_cost.toLocaleString() }}</strong></td>
+                <td class="col-date">{{ t('orders.leadTimeDays', { days: order.lead_time_days }) }}</td>
+                <td class="col-date">{{ formatDate(order.expected_delivery) }}</td>
+                <td class="col-status">
+                  <span class="badge info">{{ t(`status.${String(order.status).toLowerCase()}`) }}</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -95,6 +144,7 @@ export default {
     const loading = ref(true)
     const error = ref(null)
     const orders = ref([])
+    const submittedOrders = ref([])
 
     // Use shared filters
     const {
@@ -109,7 +159,13 @@ export default {
       try {
         loading.value = true
         const filters = getCurrentFilters()
+        // Submitted restocking orders are independent of filters; failure must not break the main table
+        const submittedPromise = api.getRestockingOrders().catch((err) => {
+          console.error('Failed to load submitted orders', err)
+          return []
+        })
         const fetchedOrders = await api.getOrders(filters)
+        submittedOrders.value = await submittedPromise
 
         // Sort orders by order_date (earliest first)
         orders.value = fetchedOrders.sort((a, b) => {
@@ -160,6 +216,7 @@ export default {
       loading,
       error,
       orders,
+      submittedOrders,
       getOrdersByStatus,
       getOrderStatusClass,
       formatDate,
@@ -176,6 +233,12 @@ export default {
 .orders-table {
   table-layout: fixed;
   width: 100%;
+}
+
+.empty-submitted {
+  padding: 1.5rem;
+  color: #64748b;
+  font-size: 0.875rem;
 }
 
 /* Column widths */

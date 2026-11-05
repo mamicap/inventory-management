@@ -607,7 +607,9 @@ export default {
         'Sensors': t('categories.sensors'),
         'Actuators': t('categories.actuators'),
         'Controllers': t('categories.controllers'),
-        'Power Supplies': t('categories.powerSupplies')
+        'Power Supplies': t('categories.powerSupplies'),
+        'Widgets': t('categories.widgets'),
+        'Components': t('categories.components')
       }
       return categoryMap[category] || category
     }

@@ -6,6 +6,7 @@ export default {
     orders: 'Orders',
     finance: 'Finance',
     demandForecast: 'Demand Forecast',
+    restocking: 'Restocking',
     companyName: 'Catalyst Components',
     subtitle: 'Inventory Management System'
   },
@@ -112,6 +113,13 @@ export default {
     onTimeDelivery: 'On-Time Delivery',
     itemsCount: '{count} items',
     quantity: 'Qty',
+    submittedOrders: 'Submitted Orders',
+    submittedDate: 'Submitted',
+    leadTime: 'Lead Time',
+    leadTimeDays: '{days} days',
+    expectedDelivery: 'Expected Delivery',
+    noSubmittedOrders: 'No restocking orders have been submitted yet.',
+    total: 'Total',
     table: {
       orderNumber: 'Order Number',
       orderId: 'Order ID',
@@ -127,6 +135,35 @@ export default {
       expectedDelivery: 'Expected Delivery',
       actualDelivery: 'Actual Delivery'
     }
+  },
+
+  // Restocking
+  restocking: {
+    title: 'Restocking',
+    subtitle: 'Recommended replenishment orders based on forecasted demand and your budget',
+    budgetLabel: 'Restocking Budget',
+    availableBudget: 'Available Budget',
+    selectedTotal: 'Selected Total',
+    remainingBudget: 'Remaining Budget',
+    recommendations: 'Recommended Items',
+    table: {
+      include: 'Include',
+      sku: 'SKU',
+      name: 'Name',
+      trend: 'Trend',
+      currentStock: 'Current Stock',
+      forecastDemand: 'Forecast Demand',
+      orderQty: 'Shortfall (Order Qty)',
+      unitCost: 'Unit Cost',
+      lineTotal: 'Line Total'
+    },
+    placeOrder: 'Place Order',
+    placing: 'Placing order...',
+    successTitle: 'Order submitted',
+    successMessage: 'Order {orderNumber} was submitted. Lead time: {days} days. Expected delivery: {date}.',
+    viewOrders: 'View orders',
+    errorSubmit: 'Failed to submit the restocking order.',
+    empty: 'No items fit the selected budget. Increase the budget to see recommendations.'
   },
 
   // Finance/Spending
@@ -204,6 +241,7 @@ export default {
     shipped: 'Shipped',
     processing: 'Processing',
     backordered: 'Backordered',
+    submitted: 'Submitted',
     inStock: 'In Stock',
     lowStock: 'Low Stock',
     adequate: 'Adequate'
@@ -229,7 +267,9 @@ export default {
     sensors: 'Sensors',
     actuators: 'Actuators',
     controllers: 'Controllers',
-    powerSupplies: 'Power Supplies'
+    powerSupplies: 'Power Supplies',
+    widgets: 'Widgets',
+    components: 'Components'
   },
 
   // Spending Categories
